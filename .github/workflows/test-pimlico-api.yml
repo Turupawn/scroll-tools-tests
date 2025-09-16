@@ -1,0 +1,95 @@
+name: Test Pimlico API Integration
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'apis/pimlico/**'
+      - '.github/workflows/test-pimlico-api.yml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'apis/pimlico/**'
+      - '.github/workflows/test-pimlico-api.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'apis/pimlico/package-lock.json'
+        
+    - name: Install dependencies
+      working-directory: ./apis/pimlico
+      run: npm ci
+      
+    - name: Run linting
+      working-directory: ./apis/pimlico
+      run: |
+        # Check if TypeScript is properly configured
+        npx tsc --noEmit --skipLibCheck
+        
+    - name: Validate secrets
+      run: |
+        if [ -z "${{ secrets.PIMLICO_API_KEY }}" ]; then
+          echo "❌ PIMLICO_API_KEY secret is not set"
+          exit 1
+        fi
+        if [ -z "${{ secrets.TEST_PRIVATE_KEY }}" ]; then
+          echo "❌ TEST_PRIVATE_KEY secret is not set"
+          exit 1
+        fi
+        echo "✅ All required secrets are available"
+        
+    - name: Run tests
+      working-directory: ./apis/pimlico
+      run: npm test
+      env:
+        PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
+        PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+      continue-on-error: false
+        
+        
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const comment = `
+          ## ✅ Pimlico API Tests Completed
+          
+          Tests have been successfully executed for the Pimlico API integration.
+          
+          ### Test Details
+          - **Node.js Version**: ${{ matrix.node-version }}
+          - **OS**: Ubuntu Latest
+          - **Test Framework**: Jest
+          - **API Integration**: Pimlico Smart Accounts
+          - **Network**: Scroll Sepolia Testnet
+          
+          ### What was tested:
+          - ✅ Environment variables validation
+          - ✅ Smart account creation
+          - ✅ Transaction execution
+          - ✅ API connectivity
+          - ✅ Proper script exit handling
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
