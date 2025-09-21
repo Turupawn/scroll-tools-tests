@@ -1,16 +1,16 @@
-name: Test Pimlico API Integration
+name: Test Privy API Integration
 
 on:
   push:
     branches: [ main, master, develop ]
     paths:
-      - 'apis/pimlico/**'
-      - '.github/workflows/test-pimlico-api.yml'
+      - 'apis/privy/**'
+      - '.github/workflows/test-privy-api.yml'
   pull_request:
     branches: [ main, master, develop ]
     paths:
-      - 'apis/pimlico/**'
-      - '.github/workflows/test-pimlico-api.yml'
+      - 'apis/privy/**'
+      - '.github/workflows/test-privy-api.yml'
 
 jobs:
   test:
@@ -29,14 +29,14 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        cache-dependency-path: 'apis/pimlico/package-lock.json'
+        cache-dependency-path: 'apis/privy/package-lock.json'
         
     - name: Install dependencies
-      working-directory: ./apis/pimlico
+      working-directory: ./apis/privy
       run: npm ci --legacy-peer-deps
       
     - name: Run linting
-      working-directory: ./apis/pimlico
+      working-directory: ./apis/privy
       run: |
         # Check if TypeScript is properly configured
         npx tsc --noEmit --skipLibCheck
@@ -44,20 +44,27 @@ jobs:
     - name: Validate secrets
       run: |
         echo "🔍 Debugging secrets..."
-        echo "PIMLICO_API_KEY length: ${#PIMLICO_API_KEY}"
+        echo "PRIVY_APP_ID length: ${#PRIVY_APP_ID}"
+        echo "PRIVY_APP_SECRET length: ${#PRIVY_APP_SECRET}"
         echo "FUNDED_WALLET_PRIVATE_KEY length: ${#FUNDED_WALLET_PRIVATE_KEY}"
         
-        if [ -z "${{ secrets.PIMLICO_API_KEY }}" ]; then
-          echo "❌ PIMLICO_API_KEY secret is not set or empty"
+        if [ -z "${{ secrets.PRIVY_APP_ID }}" ]; then
+          echo "❌ PRIVY_APP_ID secret is not set or empty"
           echo "Available secrets:"
-          echo "  - PIMLICO_API_KEY: '${{ secrets.PIMLICO_API_KEY }}'"
+          echo "  - PRIVY_APP_ID: '${{ secrets.PRIVY_APP_ID }}'"
+          echo "  - PRIVY_APP_SECRET: '${{ secrets.PRIVY_APP_SECRET }}'"
           echo "  - FUNDED_WALLET_PRIVATE_KEY: '${{ secrets.FUNDED_WALLET_PRIVATE_KEY }}'"
           echo ""
           echo "💡 To fix this:"
           echo "1. Go to your repository Settings"
           echo "2. Click 'Secrets and variables' → 'Actions'"
-          echo "3. Add a new secret named exactly 'PIMLICO_API_KEY'"
-          echo "4. Set the value to your Pimlico API key"
+          echo "3. Add a new secret named exactly 'PRIVY_APP_ID'"
+          echo "4. Set the value to your Privy App ID"
+          exit 1
+        fi
+        if [ -z "${{ secrets.PRIVY_APP_SECRET }}" ]; then
+          echo "❌ PRIVY_APP_SECRET secret is not set or empty"
+          echo "💡 Add a secret named exactly 'PRIVY_APP_SECRET' with your Privy App Secret"
           exit 1
         fi
         if [ -z "${{ secrets.FUNDED_WALLET_PRIVATE_KEY }}" ]; then
@@ -68,10 +75,11 @@ jobs:
         echo "✅ All required secrets are available"
         
     - name: Run tests
-      working-directory: ./apis/pimlico
+      working-directory: ./apis/privy
       run: npm test
       env:
-        PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
+        PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
+        PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
         FUNDED_WALLET_PRIVATE_KEY: ${{ secrets.FUNDED_WALLET_PRIVATE_KEY }}
       continue-on-error: false
         
@@ -82,20 +90,21 @@ jobs:
       with:
         script: |
           const comment = `
-          ## ✅ Pimlico API Tests Completed
+          ## ✅ Privy API Tests Completed
           
-          Tests have been successfully executed for the Pimlico API integration.
+          Tests have been successfully executed for the Privy API integration.
           
           ### Test Details
           - **Node.js Version**: ${{ matrix.node-version }}
           - **OS**: Ubuntu Latest
           - **Test Framework**: Jest
-          - **API Integration**: Pimlico Smart Accounts
+          - **API Integration**: Privy Wallet Management
           - **Network**: Scroll Sepolia Testnet
           
           ### What was tested:
           - ✅ Environment variables validation
-          - ✅ Smart account creation
+          - ✅ Wallet creation via Privy API
+          - ✅ Message signing functionality
           - ✅ Transaction execution
           - ✅ API connectivity
           - ✅ Proper script exit handling
