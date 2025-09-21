@@ -1,0 +1,102 @@
+name: Test Alchemy API Integration
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'apis/alchemy/**'
+      - '.github/workflows/test-alchemy-api.yml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'apis/alchemy/**'
+      - '.github/workflows/test-alchemy-api.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.15]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'apis/alchemy/package-lock.json'
+        
+    - name: Install dependencies
+      working-directory: ./apis/alchemy
+      run: npm ci --legacy-peer-deps
+      
+    - name: Run linting
+      working-directory: ./apis/alchemy
+      run: |
+        # Check if TypeScript is properly configured
+        npx tsc --noEmit --skipLibCheck
+        
+    - name: Validate secrets
+      run: |
+        echo "🔍 Debugging secrets..."
+        echo "ALCHEMY_API_KEY length: ${#ALCHEMY_API_KEY}"
+        
+        if [ -z "${{ secrets.ALCHEMY_API_KEY }}" ]; then
+          echo "❌ ALCHEMY_API_KEY secret is not set or empty"
+          echo "Available secrets:"
+          echo "  - ALCHEMY_API_KEY: '${{ secrets.ALCHEMY_API_KEY }}'"
+          echo ""
+          echo "💡 To fix this:"
+          echo "1. Go to your repository Settings"
+          echo "2. Click 'Secrets and variables' → 'Actions'"
+          echo "3. Add a new secret named exactly 'ALCHEMY_API_KEY'"
+          echo "4. Set the value to your Alchemy API key"
+          exit 1
+        fi
+        echo "✅ All required secrets are available"
+        
+    - name: Run tests
+      working-directory: ./apis/alchemy
+      run: npm test
+      env:
+        ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      continue-on-error: false
+        
+        
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const comment = `
+          ## ✅ Alchemy API Tests Completed
+          
+          Tests have been successfully executed for the Alchemy API integration.
+          
+          ### Test Details
+          - **Node.js Version**: ${{ matrix.node-version }}
+          - **OS**: Ubuntu Latest
+          - **Test Framework**: Jest
+          - **API Integration**: Alchemy RPC
+          - **Network**: Scroll Sepolia Testnet
+          
+          ### What was tested:
+          - ✅ Environment variables validation
+          - ✅ RPC connectivity to Scroll Sepolia
+          - ✅ Current block number fetching
+          - ✅ Block number validation (not zero)
+          - ✅ API connectivity
+          - ✅ Proper script exit handling
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
