@@ -43,12 +43,26 @@ jobs:
         
     - name: Validate secrets
       run: |
+        echo "🔍 Debugging secrets..."
+        echo "PIMLICO_API_KEY length: ${#PIMLICO_API_KEY}"
+        echo "TEST_PRIVATE_KEY length: ${#TEST_PRIVATE_KEY}"
+        
         if [ -z "${{ secrets.PIMLICO_API_KEY }}" ]; then
-          echo "❌ PIMLICO_API_KEY secret is not set"
+          echo "❌ PIMLICO_API_KEY secret is not set or empty"
+          echo "Available secrets:"
+          echo "  - PIMLICO_API_KEY: '${{ secrets.PIMLICO_API_KEY }}'"
+          echo "  - TEST_PRIVATE_KEY: '${{ secrets.TEST_PRIVATE_KEY }}'"
+          echo ""
+          echo "💡 To fix this:"
+          echo "1. Go to your repository Settings"
+          echo "2. Click 'Secrets and variables' → 'Actions'"
+          echo "3. Add a new secret named exactly 'PIMLICO_API_KEY'"
+          echo "4. Set the value to your Pimlico API key"
           exit 1
         fi
         if [ -z "${{ secrets.TEST_PRIVATE_KEY }}" ]; then
-          echo "❌ TEST_PRIVATE_KEY secret is not set"
+          echo "❌ TEST_PRIVATE_KEY secret is not set or empty"
+          echo "💡 Add a secret named exactly 'TEST_PRIVATE_KEY' with a test private key"
           exit 1
         fi
         echo "✅ All required secrets are available"
@@ -58,7 +72,7 @@ jobs:
       run: npm test
       env:
         PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
-        PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+        FUNDED_WALLET_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
       continue-on-error: false
         
         

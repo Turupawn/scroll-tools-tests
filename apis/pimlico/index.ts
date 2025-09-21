@@ -8,7 +8,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 
 export async function main() {
   const apiKey = process.env.PIMLICO_API_KEY!
-  const privateKey: `0x${string}` = process.env.PRIVATE_KEY! as `0x${string}`
+  const privateKey: `0x${string}` = process.env.FUNDED_WALLET_PRIVATE_KEY! as `0x${string}`
 
   const publicClient = createPublicClient({
     chain: scrollSepolia,

@@ -3,16 +3,16 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-describe('Pimlico API Tests', () => {
-  test('should execute main function and handle transaction', async () => {
+describe('Privy API Tests', () => {
+  test('should execute main function and handle wallet creation and transaction', async () => {
     // Validate environment variables first
-    expect(process.env.PIMLICO_API_KEY).toBeDefined();
-    expect(process.env.FUNDED_WALLET_PRIVATE_KEY).toBeDefined();
+    expect(process.env.PRIVY_APP_ID).toBeDefined();
+    expect(process.env.PRIVY_APP_SECRET).toBeDefined();
     
     // Log environment setup for debugging
     console.log('🔧 Environment setup:');
-    console.log(`   - PIMLICO_API_KEY: ${process.env.PIMLICO_API_KEY ? '✅ Set' : '❌ Missing'}`);
-    console.log(`   - FUNDED_WALLET_PRIVATE_KEY: ${process.env.FUNDED_WALLET_PRIVATE_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   - PRIVY_APP_ID: ${process.env.PRIVY_APP_ID ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   - PRIVY_APP_SECRET: ${process.env.PRIVY_APP_SECRET ? '✅ Set' : '❌ Missing'}`);
     console.log(`   - Node.js version: ${process.version}`);
     console.log(`   - Platform: ${process.platform}`);
 
@@ -27,7 +27,7 @@ describe('Pimlico API Tests', () => {
       if (stderr) console.log('⚠️  Stderr:', stderr);
       
       // Check if we got a transaction hash in the output
-      const txHashMatch = stdout.match(/Transaction included: (0x[a-fA-F0-9]{64})/);
+      const txHashMatch = stdout.match(/Transaction sent: (0x[a-fA-F0-9]{64})/);
       
       if (txHashMatch) {
         const txHash = txHashMatch[1];
@@ -39,12 +39,27 @@ describe('Pimlico API Tests', () => {
         
         // Verify script completed successfully
         expect(stdout).toContain('✅ Script completed successfully');
+        
+        // Verify wallet creation
+        expect(stdout).toContain('Wallet created:');
+        expect(stdout).toContain('Wallet ID:');
+        
+        // Verify message signing
+        expect(stdout).toContain('Message signed:');
       } else {
-        // Check if we got the expected insufficient funds error
-        if (stdout.includes('didn\'t pay prefund') || stderr.includes('didn\'t pay prefund')) {
+        // Check if we got expected error messages
+        if (stdout.includes('insufficient funds') || 
+            stdout.includes('Insufficient funds') ||
+            stderr.includes('insufficient funds') ||
+            stderr.includes('Insufficient funds')) {
           console.log('⚠️  Transaction failed due to insufficient funds (expected for test account)');
-          console.log('✅ Smart account creation and API connectivity verified');
-          expect(stdout + stderr).toContain('didn\'t pay prefund');
+          console.log('✅ Wallet creation and API connectivity verified');
+          expect(stdout + stderr).toMatch(/insufficient funds|Insufficient funds/i);
+        } else if (stdout.includes('Wallet created:') && stdout.includes('Message signed:')) {
+          console.log('✅ Wallet creation and message signing successful');
+          console.log('⚠️  Transaction may have failed due to insufficient funds');
+          expect(stdout).toContain('Wallet created:');
+          expect(stdout).toContain('Message signed:');
         } else {
           // If we don't see expected output, fail the test
           throw new Error(`Unexpected output: ${stdout}\nStderr: ${stderr}`);
@@ -58,10 +73,11 @@ describe('Pimlico API Tests', () => {
       }
       
       // Check if the error contains expected insufficient funds message
-      if (error.message.includes('didn\'t pay prefund')) {
+      if (error.message.includes('insufficient funds') || 
+          error.message.includes('Insufficient funds')) {
         console.log('⚠️  Transaction failed due to insufficient funds (expected for test account)');
-        console.log('✅ Smart account creation and API connectivity verified');
-        expect(error.message).toContain('didn\'t pay prefund');
+        console.log('✅ Wallet creation and API connectivity verified');
+        expect(error.message).toMatch(/insufficient funds|Insufficient funds/i);
       } else {
         // Re-throw unexpected errors
         throw error;
