@@ -2,7 +2,7 @@
 
 Unit tests and code snippets for building on Scroll. This repo contains working examples of DeFi protocols and infrastructure services specifically configured for Scroll Sepolia.
 
-## Smart Contracts
+## Smart Contracts [![Smart Contract Tests](https://github.com/Turupawn/scroll-tools-tests/actions/workflows/smart-contracts.yml/badge.svg)](https://github.com/Turupawn/scroll-tools-tests/actions/workflows/smart-contracts.yml)
 
 | Project      | What It Does                           | Demo | Docs | Test |
 |----------------|--------------------------------------------|--------|--------|---------|
